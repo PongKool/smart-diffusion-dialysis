@@ -123,17 +123,11 @@ with col2:
         height=300
     )
 
-st.subheader("Sensor Trends")
-st.line_chart(
-    df.set_index("time")[[
-        "S1_feed_flow_Lmin",
-        "S7_water_flow_Lmin",
-        "S2_feed_cond_mScm",
-        "S6_outlet_cond_mScm",
-        "S3_temp_C"
-    ]],
-    height=300
-)
+st.subheader("Flow Rates & Temperature")
+st.line_chart(df.set_index("time")[["S1_feed_flow_Lmin", "S7_water_flow_Lmin", "S3_temp_C"]], height=250)
+
+st.subheader("Conductivity Trends")
+st.line_chart(df.set_index("time")[["S2_feed_cond_mScm", "S6_outlet_cond_mScm"]], height=250)
 
 # -----------------------------
 # Data table
