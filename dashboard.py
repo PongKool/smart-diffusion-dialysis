@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+import plotly.graph_objects as go  # <-- Add this line
 
 # -----------------------------
 # Helper functions
@@ -124,7 +125,49 @@ with col2:
     )
 
 st.subheader("Flow Rates & Temperature")
-st.line_chart(df.set_index("time")[["S1_feed_flow_Lmin", "S7_water_flow_Lmin", "S3_temp_C"]], height=250)
+
+# Create a figure with a secondary y-axis
+fig = go.Figure()
+
+# Add Flow Rates on the Primary (Left) Y-Axis
+fig.add_trace(go.Scatter(
+    x=df["time"], 
+    y=df["S1_feed_flow_Lmin"], 
+    name="S1 Feed Flow (L/min)",
+    yaxis="y1"
+))
+fig.add_trace(go.Scatter(
+    x=df["time"], 
+    y=df["S7_water_flow_Lmin"], 
+    name="S7 Water Flow (L/min)",
+    yaxis="y1"
+))
+
+# Add Temperature on the Secondary (Right) Y-Axis
+fig.add_trace(go.Scatter(
+    x=df["time"], 
+    y=df["S3_temp_C"], 
+    name="S3 Temp (°C)",
+    yaxis="y2"
+))
+
+# Configure the dual axis layout
+fig.update_layout(
+    xaxis=dict(title="Time"),
+    yaxis=dict(title="Flow Rate (L/min)"),
+    yaxis2=dict(
+        title="Temperature (°C)",
+        overlaying="y",
+        side="right"
+    ),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    margin=dict(l=40, r=40, t=40, b=40),
+    height=350
+)
+
+# Render the interactive chart in Streamlit
+st.plotly_chart(fig, use_container_width=True)
+
 
 st.subheader("Conductivity Trends")
 st.line_chart(df.set_index("time")[["S2_feed_cond_mScm", "S6_outlet_cond_mScm"]], height=250)
