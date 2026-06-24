@@ -244,23 +244,82 @@ with t2:
         height=300
     )
 
-st.markdown("**Pressure Trend**")
-st.line_chart(
-    df.set_index("time")[["S4_inlet_press_bar", "S5_outlet_press_bar", "deltaP_bar"]],
-    height=300
+# ==========================================
+# CHART 1: PRESSURE & CONDUCTIVITY TREND
+# ==========================================
+st.markdown("**Pressure & Conductivity Trend**")
+fig_press_cond = make_subplots(specs=[[{"secondary_y": True}]])
+
+# Left Axis: Conductivity (Solid Lines)
+fig_press_cond.add_trace(
+    go.Scatter(x=df["time"], y=df["S2_feed_cond_mScm"], name="Feed Cond (mS/cm)", line=dict(color="#0284c7")),
+    secondary_y=False,
+)
+fig_press_cond.add_trace(
+    go.Scatter(x=df["time"], y=df["S6_outlet_cond_mScm"], name="Outlet Cond (mS/cm)", line=dict(color="#0ea5e9")),
+    secondary_y=False,
 )
 
-st.markdown("**Sensor Trend Overview**")
-st.line_chart(
-    df.set_index("time")[[
-        "S1_feed_flow_Lmin",
-        "S7_water_flow_Lmin",
-        "S2_feed_cond_mScm",
-        "S6_outlet_cond_mScm",
-        "S3_temp_C"
-    ]],
-    height=300
+# Right Axis: Pressure (Dashed / Solid Bold Lines)
+fig_press_cond.add_trace(
+    go.Scatter(x=df["time"], y=df["S4_inlet_press_bar"], name="Inlet Press (bar)", line=dict(color="#dc2626", dash="dash")),
+    secondary_y=True,
 )
+fig_press_cond.add_trace(
+    go.Scatter(x=df["time"], y=df["S5_outlet_press_bar"], name="Outlet Press (bar)", line=dict(color="#f97316", dash="dash")),
+    secondary_y=True,
+)
+fig_press_cond.add_trace(
+    go.Scatter(x=df["time"], y=df["deltaP_bar"], name="Pressure Drop (bar)", line=dict(color="#b91c1c", width=2.5)),
+    secondary_y=True,
+)
+
+# hovermode="x unified" enables the unified tooltip on hover
+fig_press_cond.update_layout(
+    height=350, 
+    hovermode="x unified", 
+    margin=dict(l=20, r=20, t=20, b=20),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+)
+fig_press_cond.update_yaxes(title_text="Conductivity (mS/cm)", secondary_y=False)
+fig_press_cond.update_yaxes(title_text="Pressure (bar)", secondary_y=True)
+
+st.plotly_chart(fig_press_cond, use_container_width=True)
+
+
+# ==========================================
+# CHART 2: FLOW RATE & TEMPERATURE TREND
+# ==========================================
+st.markdown("**Flow Rate & Temperature Trend**")
+fig_flow_temp = make_subplots(specs=[[{"secondary_y": True}]])
+
+# Left Axis: Flow Rates (Solid Lines)
+fig_flow_temp.add_trace(
+    go.Scatter(x=df["time"], y=df["S1_feed_flow_Lmin"], name="Feed Flow (L/min)", line=dict(color="#10b981")),
+    secondary_y=False,
+)
+fig_flow_temp.add_trace(
+    go.Scatter(x=df["time"], y=df["S7_water_flow_Lmin"], name="Water Flow (L/min)", line=dict(color="#34d399")),
+    secondary_y=False,
+)
+
+# Right Axis: Temperature (Dashed Amber Line)
+fig_flow_temp.add_trace(
+    go.Scatter(x=df["time"], y=df["S3_temp_C"], name="Temperature (°C)", line=dict(color="#f59e0b", width=2.5, dash="dash")),
+    secondary_y=True,
+)
+
+# hovermode="x unified" enables the unified tooltip on hover
+fig_flow_temp.update_layout(
+    height=350, 
+    hovermode="x unified", 
+    margin=dict(l=20, r=20, t=20, b=20),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+)
+fig_flow_temp.update_yaxes(title_text="Flow Rate (L/min)", secondary_y=False)
+fig_flow_temp.update_yaxes(title_text="Temperature (°C)", secondary_y=True)
+
+st.plotly_chart(fig_flow_temp, use_container_width=True)
 
 # -----------------------------
 # Current sensor snapshot
