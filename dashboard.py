@@ -191,10 +191,44 @@ k2.metric("ML Fouling Score", f"{latest['ml_fouling_score']:.0f} / 100")
 k3.metric("Pressure Drop", f"{latest['deltaP_bar']:.2f} bar")
 k4.metric("Formula Recovery", f"{latest['acid_recovery_pct']:.1f} %")
 
-st.subheader("Cleaning Forecast")
-f1, f2 = st.columns(2)
-f1.metric("ML Days to Cleaning", f"{latest['ml_days_to_cleaning']:.2f} days")
-f2.metric("Estimated Cleaning Date", estimated_cleaning_date.strftime("%Y-%m-%d %H:%M"))
+# -----------------------------
+# Cleaning Forecast Box
+# -----------------------------
+if latest["ml_days_to_cleaning"] <= 1:
+    forecast_color = "#dc2626"   # red
+    forecast_text = "Cleaning Required Soon"
+elif latest["ml_days_to_cleaning"] <= 3:
+    forecast_color = "#f59e0b"   # amber
+    forecast_text = "Prepare for Cleaning"
+else:
+    forecast_color = "#2563eb"   # blue
+    forecast_text = "Cleaning Forecast Normal"
+
+st.markdown(
+    f"""
+    <div style="
+        background-color:{forecast_color};
+        padding:20px;
+        border-radius:14px;
+        color:white;
+        margin-top:10px;
+        margin-bottom:18px;">
+        <div style="font-size:24px; font-weight:700; margin-bottom:8px;">
+            Cleaning Forecast
+        </div>
+        <div style="font-size:18px; margin-bottom:6px;">
+            Status: <b>{forecast_text}</b>
+        </div>
+        <div style="font-size:18px; margin-bottom:6px;">
+            ML Days to Cleaning: <b>{latest['ml_days_to_cleaning']:.2f} days</b>
+        </div>
+        <div style="font-size:18px;">
+            Estimated Cleaning Date: <b>{estimated_cleaning_date.strftime("%Y-%m-%d %H:%M")}</b>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # -----------------------------
 # Gauge charts
