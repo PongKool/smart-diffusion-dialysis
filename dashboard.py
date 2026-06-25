@@ -1,3 +1,4 @@
+import math
 import pandas as pd
 import streamlit as st
 import joblib
@@ -104,6 +105,44 @@ def pressure_gauge(value, title, min_val=0, max_val=1.0):
     fig.update_layout(height=260, margin=dict(l=20, r=20, t=40, b=20))
     return fig
 
+def make_days_to_cleaning_gauge(days_value):
+    # Auto-scale gauge max
+    gauge_max = max(5.0, math.ceil(float(days_value) + 1.0))
+
+    if days_value <= 1:
+        forecast_gauge_color = "#dc2626"  # red
+    elif days_value <= 3:
+        forecast_gauge_color = "#f59e0b"  # amber
+    else:
+        forecast_gauge_color = "#2563eb"  # blue
+
+    # Dynamic step boundaries
+    step1_end = min(1.0, gauge_max)
+    step2_end = min(3.0, gauge_max)
+
+    steps = []
+    if step1_end > 0:
+        steps.append({"range": [0, step1_end], "color": "#fecaca"})   # critical
+    if step2_end > step1_end:
+        steps.append({"range": [step1_end, step2_end], "color": "#fde68a"})  # warning
+    if gauge_max > step2_end:
+        steps.append({"range": [step2_end, gauge_max], "color": "#dbeafe"})  # normal
+
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=float(days_value),
+        title={"text": "Days to Cleaning"},
+        number={"suffix": " d"},
+        gauge={
+            "axis": {"range": [0, gauge_max]},
+            "bar": {"color": forecast_gauge_color},
+            "steps": steps,
+        }
+    ))
+    fig.update_layout(height=260, margin=dict(l=20, r=20, t=40, b=20))
+    return fig
+
+
 # -----------------------------
 # Page config
 # -----------------------------
@@ -159,6 +198,8 @@ df["ml_membrane_state"] = df["ml_fouling_score"].apply(classify_state)
 latest = df.iloc[-1]
 status_color = get_status_color(latest["ml_fouling_score"])
 estimated_cleaning_date = latest["time"] + pd.to_timedelta(latest["ml_days_to_cleaning"], unit="D")
+last_update_time = latest["time"].strftime("%Y-%m-%d %H:%M")
+membrane_health_pct = max(0, 100 - latest["ml_fouling_score"])
 
 # -----------------------------
 # Status banner
@@ -181,6 +222,24 @@ st.markdown(
 )
 
 # -----------------------------
+# Last update time
+# -----------------------------
+st.markdown(
+    f"""
+    <div style="
+        background-color:#f3f4f6;
+        padding:10px 14px;
+        border-radius:10px;
+        color:#111827;
+        font-size:16px;
+        margin-bottom:16px;">
+        <b>Last Update Time:</b> {last_update_time}
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+# -----------------------------
 # KPI cards
 # -----------------------------
 st.subheader("Key Performance Indicators")
@@ -195,13 +254,13 @@ k4.metric("Formula Recovery", f"{latest['acid_recovery_pct']:.1f} %")
 # Cleaning Forecast Box
 # -----------------------------
 if latest["ml_days_to_cleaning"] <= 1:
-    forecast_color = "#dc2626"   # red
+    forecast_color = "#dc2626"
     forecast_text = "Cleaning Required Soon"
 elif latest["ml_days_to_cleaning"] <= 3:
-    forecast_color = "#f59e0b"   # amber
+    forecast_color = "#f59e0b"
     forecast_text = "Prepare for Cleaning"
 else:
-    forecast_color = "#2563eb"   # blue
+    forecast_color = "#2563eb"
     forecast_text = "Cleaning Forecast Normal"
 
 st.markdown(
@@ -231,49 +290,69 @@ st.markdown(
 )
 
 # -----------------------------
+# Membrane health progress bar
+# -----------------------------
+st.subheader("Membrane Health")
+
+if membrane_health_pct >= 70:
+    health_text = "Healthy"
+    health_color = "#16a34a"
+elif membrane_health_pct >= 40:
+    health_text = "Degrading"
+    health_color = "#f59e0b"
+else:
+    health_text = "Poor / Near Cleaning"
+    health_color = "#dc2626"
+
+st.markdown(
+    f"""
+    <div style="
+        background-color:#f9fafb;
+        padding:16px;
+        border-radius:12px;
+        margin-bottom:12px;">
+        <div style="font-size:20px; font-weight:700; color:#111827; margin-bottom:6px;">
+            Membrane Health
+        </div>
+        <div style="font-size:17px; color:{health_color}; margin-bottom:8px;">
+            <b>{health_text}</b> — {membrane_health_pct:.1f}%
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+st.progress(membrane_health_pct / 100.0)
+
+# -----------------------------
 # Gauge charts
 # -----------------------------
 st.subheader("Live Gauges")
-# Change from 3 columns to 4 columns
 g1, g2, g3, g4 = st.columns(4)
 
 with g1:
-    st.plotly_chart(gauge_chart(latest["ml_acid_recovery_pct"], "ML Acid Recovery (%)", 0, 100), use_container_width=True)
+    st.plotly_chart(
+        gauge_chart(latest["ml_acid_recovery_pct"], "ML Acid Recovery (%)", 0, 100),
+        use_container_width=True
+    )
 
 with g2:
-    st.plotly_chart(gauge_chart(latest["ml_fouling_score"], "ML Fouling Score", 0, 100), use_container_width=True)
+    st.plotly_chart(
+        gauge_chart(latest["ml_fouling_score"], "ML Fouling Score", 0, 100),
+        use_container_width=True
+    )
 
 with g3:
-    st.plotly_chart(pressure_gauge(latest["deltaP_bar"], "Pressure Drop", 0, 1.0), use_container_width=True)
+    st.plotly_chart(
+        pressure_gauge(latest["deltaP_bar"], "Pressure Drop", 0, 1.0),
+        use_container_width=True
+    )
 
-# Add the 4th column for Days to Cleaning
 with g4:
-    # Set a color based on the cleaning countdown threshold
-    if latest["ml_days_to_cleaning"] <= 1:
-        forecast_gauge_color = "#dc2626"  # Red
-    elif latest["ml_days_to_cleaning"] <= 3:
-        forecast_gauge_color = "#f59e0b"  # Amber
-    else:
-        forecast_gauge_color = "#2563eb"  # Blue
-
-    fig_forecast = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=float(latest["ml_days_to_cleaning"]),
-        title={"text": "Days to Cleaning"},
-        number={"suffix": " d"},
-        gauge={
-            "axis": {"range": [0, 5.0]}, # Adjust max range (e.g., 5 days) as appropriate for your operation
-            "bar": {"color": forecast_gauge_color},
-            "steps": [
-                {"range": [0, 1], "color": "#fecaca"},   # Critical (Red match)
-                {"range": [1, 3], "color": "#fde68a"},   # Warning (Amber match)
-                {"range": [3, 5.0], "color": "#dbeafe"}, # Normal (Blue match)
-            ],
-        }
-    ))
-    fig_forecast.update_layout(height=260, margin=dict(l=20, r=20, t=40, b=20))
-    st.plotly_chart(fig_forecast, use_container_width=True)
-    
+    st.plotly_chart(
+        make_days_to_cleaning_gauge(latest["ml_days_to_cleaning"]),
+        use_container_width=True
+    )
 
 # -----------------------------
 # Recommendation box
