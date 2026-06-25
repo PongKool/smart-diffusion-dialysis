@@ -234,25 +234,46 @@ st.markdown(
 # Gauge charts
 # -----------------------------
 st.subheader("Live Gauges")
-g1, g2, g3 = st.columns(3)
+# Change from 3 columns to 4 columns
+g1, g2, g3, g4 = st.columns(4)
 
 with g1:
-    st.plotly_chart(
-        gauge_chart(latest["ml_acid_recovery_pct"], "ML Acid Recovery (%)", 0, 100),
-        use_container_width=True
-    )
+    st.plotly_chart(gauge_chart(latest["ml_acid_recovery_pct"], "ML Acid Recovery (%)", 0, 100), use_container_width=True)
 
 with g2:
-    st.plotly_chart(
-        gauge_chart(latest["ml_fouling_score"], "ML Fouling Score", 0, 100),
-        use_container_width=True
-    )
+    st.plotly_chart(gauge_chart(latest["ml_fouling_score"], "ML Fouling Score", 0, 100), use_container_width=True)
 
 with g3:
-    st.plotly_chart(
-        pressure_gauge(latest["deltaP_bar"], "Pressure Drop", 0, 1.0),
-        use_container_width=True
-    )
+    st.plotly_chart(pressure_gauge(latest["deltaP_bar"], "Pressure Drop", 0, 1.0), use_container_width=True)
+
+# Add the 4th column for Days to Cleaning
+with g4:
+    # Set a color based on the cleaning countdown threshold
+    if latest["ml_days_to_cleaning"] <= 1:
+        forecast_gauge_color = "#dc2626"  # Red
+    elif latest["ml_days_to_cleaning"] <= 3:
+        forecast_gauge_color = "#f59e0b"  # Amber
+    else:
+        forecast_gauge_color = "#2563eb"  # Blue
+
+    fig_forecast = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=float(latest["ml_days_to_cleaning"]),
+        title={"text": "Days to Cleaning"},
+        number={"suffix": " d"},
+        gauge={
+            "axis": {"range": [0, 5.0]}, # Adjust max range (e.g., 5 days) as appropriate for your operation
+            "bar": {"color": forecast_gauge_color},
+            "steps": [
+                {"range": [0, 1], "color": "#fecaca"},   # Critical (Red match)
+                {"range": [1, 3], "color": "#fde68a"},   # Warning (Amber match)
+                {"range": [3, 5.0], "color": "#dbeafe"}, # Normal (Blue match)
+            ],
+        }
+    ))
+    fig_forecast.update_layout(height=260, margin=dict(l=20, r=20, t=40, b=20))
+    st.plotly_chart(fig_forecast, use_container_width=True)
+    
 
 # -----------------------------
 # Recommendation box
