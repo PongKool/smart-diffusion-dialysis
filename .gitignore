@@ -1,1 +1,7 @@
-# *.pkl
+# Ignore Python internal cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# (Optional) Keep your .pkl rule active for any NEW pkl files you might make later
+*.pkl
