@@ -390,20 +390,34 @@ with t1:
     
     # 1. Prepare historical data
     hist_df = df[["time", "acid_recovery_pct", "ml_acid_recovery_pct"]].copy()
+    last_time = hist_df["time"].max()
+    latest_ml_rec = hist_df["ml_acid_recovery_pct"].iloc[-1]
     
-    # 2. Fit a linear trend to the ML predictions (days elapsed vs recovery)
-    hist_df['days_elapsed'] = (hist_df['time'] - hist_df['time'].min()).dt.total_seconds() / (24 * 3600)
-    slope, intercept = np.polyfit(hist_df['days_elapsed'], hist_df['ml_acid_recovery_pct'], 1)
+    # 2. Grab the actual remaining days to cleaning from your ML model
+    days_remaining = float(latest["ml_days_to_cleaning"])
     
     # 3. Generate future timestamps (next 7 days)
-    last_time = hist_df["time"].max()
-    last_day_numeric = hist_df['days_elapsed'].max()
-    
     future_times = pd.date_range(start=last_time, periods=8, freq="D")[1:]
-    future_days_numeric = last_day_numeric + np.arange(1, 8)
-    future_preds = slope * future_days_numeric + intercept
     
-    # 4. Create projection DataFrame
+    # 4. Calculate a realistic degrading projection
+    # If cleaning is needed in 3.5 days, recovery will drop faster as it approaches 0 days
+    future_preds = []
+    for i, f_time in enumerate(future_times, start=1):
+        days_out = i
+        if days_out <= days_remaining:
+            # Gradual degradation as we approach the cleaning day
+            # Drops by a minor penalty factor accelerating towards the limit
+            penalty = 0.5 * (days_out / max(1, days_remaining))**2
+            pred = latest_ml_rec - penalty
+        else:
+            # Post-cleaning limit: past the predicted operation threshold, efficiency plummets
+            days_past = days_out - days_remaining
+            pred = latest_ml_rec - 0.5 - (days_past * 2.5) 
+        
+        # Guardrail so it doesn't drop past a realistic floor (e.g., recovery_min = 60.0)
+        future_preds.append(max(55.0, pred))
+        
+    # 5. Create projection DataFrame
     projection_df = pd.DataFrame({
         "time": future_times,
         "7-Day Projected Recovery": future_preds
@@ -413,12 +427,12 @@ with t1:
     projection_df = pd.concat([
         pd.DataFrame({
             "time": [last_time], 
-            "7-Day Projected Recovery": [hist_df["ml_acid_recovery_pct"].iloc[-1]]
+            "7-Day Projected Recovery": [latest_ml_rec]
         }), 
         projection_df
     ], ignore_index=True)
     
-    # 5. Combine and rename for display
+    # 6. Combine and rename for display
     chart_df = pd.merge(hist_df[["time", "acid_recovery_pct", "ml_acid_recovery_pct"]], projection_df, on="time", how="outer")
     chart_df = chart_df.rename(columns={
         "acid_recovery_pct": "Formula Recovery",
