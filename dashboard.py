@@ -1,5 +1,6 @@
 import math
 import pandas as pd
+import numpy as np
 import streamlit as st
 import joblib
 import plotly.graph_objects as go
@@ -381,12 +382,51 @@ else:
 st.subheader("Trend Analysis")
 t1, t2 = st.columns(2)
 
+# -----------------------------
+# 7-Day Acid Recovery Projection
+# -----------------------------
 with t1:
-    st.markdown("**Acid Recovery Trend**")
-    st.line_chart(
-        df.set_index("time")[["acid_recovery_pct", "ml_acid_recovery_pct"]],
-        height=300
-    )
+    st.markdown("**Acid Recovery Trend & 7-Day Projection**")
+    
+    # 1. Prepare historical data
+    hist_df = df[["time", "acid_recovery_pct", "ml_acid_recovery_pct"]].copy()
+    
+    # 2. Fit a linear trend to the ML predictions (days elapsed vs recovery)
+    hist_df['days_elapsed'] = (hist_df['time'] - hist_df['time'].min()).dt.total_seconds() / (24 * 3600)
+    slope, intercept = np.polyfit(hist_df['days_elapsed'], hist_df['ml_acid_recovery_pct'], 1)
+    
+    # 3. Generate future timestamps (next 7 days)
+    last_time = hist_df["time"].max()
+    last_day_numeric = hist_df['days_elapsed'].max()
+    
+    future_times = pd.date_range(start=last_time, periods=8, freq="D")[1:]
+    future_days_numeric = last_day_numeric + np.arange(1, 8)
+    future_preds = slope * future_days_numeric + intercept
+    
+    # 4. Create projection DataFrame
+    projection_df = pd.DataFrame({
+        "time": future_times,
+        "7-Day Projected Recovery": future_preds
+    })
+    
+    # Connect the last historical point to the first projection point for continuity
+    projection_df = pd.concat([
+        pd.DataFrame({
+            "time": [last_time], 
+            "7-Day Projected Recovery": [hist_df["ml_acid_recovery_pct"].iloc[-1]]
+        }), 
+        projection_df
+    ], ignore_index=True)
+    
+    # 5. Combine and rename for display
+    chart_df = pd.merge(hist_df[["time", "acid_recovery_pct", "ml_acid_recovery_pct"]], projection_df, on="time", how="outer")
+    chart_df = chart_df.rename(columns={
+        "acid_recovery_pct": "Formula Recovery",
+        "ml_acid_recovery_pct": "Historical ML Recovery"
+    })
+    
+    st.line_chart(chart_df.set_index("time"), height=300)
+    
 
 with t2:
     st.markdown("**Fouling Score Trend**")
