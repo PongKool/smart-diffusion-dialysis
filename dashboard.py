@@ -6,6 +6,14 @@ import joblib
 import plotly.graph_objects as go
 
 # -----------------------------
+# Global System Constraints
+# -----------------------------
+DP_CLEAN = 0.20
+DP_MAX = 0.50
+RECOVERY_CLEAN = 82.0
+RECOVERY_MIN = 60.0
+
+# -----------------------------
 # Helper functions
 # -----------------------------
 def temp_correct_cond(cond, temp, alpha=0.02):
@@ -27,13 +35,8 @@ def calculate_metrics(df):
     out["deltaP_bar"] = out["S4_inlet_press_bar"] - out["S5_outlet_press_bar"]
 
     # Formula-based fouling score
-    dp_clean = 0.20
-    dp_max = 0.50
-    recovery_clean = 82.0
-    recovery_min = 60.0
-
-    Pn = (out["deltaP_bar"] - dp_clean) / (dp_max - dp_clean)
-    Rn = (recovery_clean - out["acid_recovery_pct"]) / (recovery_clean - recovery_min)
+    Pn = (out["deltaP_bar"] - DP_CLEAN) / (DP_MAX - DP_CLEAN)
+    Rn = (RECOVERY_CLEAN - out["acid_recovery_pct"]) / (RECOVERY_CLEAN - RECOVERY_MIN)
 
     Pn = Pn.clip(0, 1)
     Rn = Rn.clip(0, 1)
@@ -395,12 +398,12 @@ with t1:
     
     # 2. Get days remaining and define the physical floor
     days_remaining = float(latest["ml_days_to_cleaning"])
-    recovery_min = 60.0  # Defined by your system constraints
     
     # 3. Calculate the real degradation rate per day to reach the floor
-    # If days_remaining is 3.5, it spreads the remaining allowable drop over 3.5 days
+    # Dynamically derive degradation based on real global thresholds
+    
     if days_remaining > 0:
-        daily_drop_rate = (latest_ml_rec - recovery_min) / days_remaining
+        daily_drop_rate = (latest_ml_rec - RECOVERY_MIN / days_remaining
     else:
         daily_drop_rate = 5.0  # Aggressive drop if already overdue
         
