@@ -403,7 +403,7 @@ with t1:
     # Dynamically derive degradation based on real global thresholds
     
     if days_remaining > 0:
-        daily_drop_rate = (latest_ml_rec - RECOVERY_MIN / days_remaining
+        daily_drop_rate = (latest_ml_rec - RECOVERY_MIN / days_remaining)
     else:
         daily_drop_rate = 5.0  # Aggressive drop if already overdue
         
