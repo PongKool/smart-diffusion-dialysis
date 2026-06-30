@@ -393,28 +393,25 @@ with t1:
     last_time = hist_df["time"].max()
     latest_ml_rec = hist_df["ml_acid_recovery_pct"].iloc[-1]
     
-    # 2. Grab the actual remaining days to cleaning from your ML model
+    # 2. Get days remaining and define the physical floor
     days_remaining = float(latest["ml_days_to_cleaning"])
+    recovery_min = 60.0  # Defined by your system constraints
     
-    # 3. Generate future timestamps (next 7 days)
+    # 3. Calculate the real degradation rate per day to reach the floor
+    # If days_remaining is 3.5, it spreads the remaining allowable drop over 3.5 days
+    if days_remaining > 0:
+        daily_drop_rate = (latest_ml_rec - recovery_min) / days_remaining
+    else:
+        daily_drop_rate = 5.0  # Aggressive drop if already overdue
+        
+    # 4. Generate future timestamps (next 7 days)
     future_times = pd.date_range(start=last_time, periods=8, freq="D")[1:]
     
-    # 4. Calculate a realistic degrading projection
-    # If cleaning is needed in 3.5 days, recovery will drop faster as it approaches 0 days
     future_preds = []
-    for i, f_time in enumerate(future_times, start=1):
-        days_out = i
-        if days_out <= days_remaining:
-            # Gradual degradation as we approach the cleaning day
-            # Drops by a minor penalty factor accelerating towards the limit
-            penalty = 0.5 * (days_out / max(1, days_remaining))**2
-            pred = latest_ml_rec - penalty
-        else:
-            # Post-cleaning limit: past the predicted operation threshold, efficiency plummets
-            days_past = days_out - days_remaining
-            pred = latest_ml_rec - 0.5 - (days_past * 2.5) 
-        
-        # Guardrail so it doesn't drop past a realistic floor (e.g., recovery_min = 60.0)
+    for i in range(1, 8):
+        # Linearly degrade performance based on the calculated drop rate
+        pred = latest_ml_rec - (i * daily_drop_rate)
+        # Prevent the plot from dropping below a realistic absolute floor
         future_preds.append(max(55.0, pred))
         
     # 5. Create projection DataFrame
@@ -423,7 +420,7 @@ with t1:
         "7-Day Projected Recovery": future_preds
     })
     
-    # Connect the last historical point to the first projection point for continuity
+    # Connect the last historical point to the first projection point
     projection_df = pd.concat([
         pd.DataFrame({
             "time": [last_time], 
