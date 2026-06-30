@@ -396,28 +396,32 @@ with t1:
     last_time = hist_df["time"].max()
     latest_ml_rec = hist_df["ml_acid_recovery_pct"].iloc[-1]
     
-    # 2. Get days remaining and define the physical floor
+    # 2. Get days remaining 
     days_remaining = float(latest["ml_days_to_cleaning"])
     
-    # 3. Calculate the real degradation rate per day to reach the floor
-    # Dynamically derive degradation based on real global thresholds
-    
-    if days_remaining > 0:
-        daily_drop_rate = (latest_ml_rec - RECOVERY_MIN) / days_remaining
-    else:
-        daily_drop_rate = 5.0  # Aggressive drop if already overdue
-        
-    # 4. Generate future timestamps (next 7 days)
+    # 3. Generate future timestamps (next 7 days)
     future_times = pd.date_range(start=last_time, periods=8, freq="D")[1:]
     
     future_preds = []
-    for i in range(1, 8):
-        # Linearly degrade performance based on the calculated drop rate
-        pred = latest_ml_rec - (i * daily_drop_rate)
-        # Prevent the plot from dropping below a realistic absolute floor
+    for f_time in future_times:
+        # Calculate exactly how many fractional days out this specific timestamp is
+        days_out = (f_time - last_time).total_seconds() / (24 * 3600)
+        
+        if days_out <= days_remaining:
+            # Healthy state to cleaning limit: Curve downward gradually (quadratic decay)
+            # The drop accelerates slightly the closer we get to the cleaning day
+            total_allowed_drop = latest_ml_rec - RECOVERY_MIN
+            progress_ratio = days_out / days_remaining
+            pred = latest_ml_rec - (total_allowed_drop * (progress_ratio ** 1.5))
+        else:
+            # Overdue state: Drop rapidly beyond the physical threshold
+            days_overdue = days_out - days_remaining
+            pred = RECOVERY_MIN - (days_overdue * 4.0)
+            
+        # Hard floor protection
         future_preds.append(max(55.0, pred))
         
-    # 5. Create projection DataFrame
+    # 4. Create projection DataFrame
     projection_df = pd.DataFrame({
         "time": future_times,
         "7-Day Projected Recovery": future_preds
@@ -432,7 +436,7 @@ with t1:
         projection_df
     ], ignore_index=True)
     
-    # 6. Combine and rename for display
+    # 5. Combine and rename for display
     chart_df = pd.merge(hist_df[["time", "acid_recovery_pct", "ml_acid_recovery_pct"]], projection_df, on="time", how="outer")
     chart_df = chart_df.rename(columns={
         "acid_recovery_pct": "Formula Recovery",
