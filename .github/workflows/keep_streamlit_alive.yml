@@ -1,31 +1,25 @@
-name: Streamlit Keep Alive (Empty Commit)
+name: Streamlit Keep Alive
 
 on:
   schedule:
-    # Runs every 8 hours to beat the 12-hour timeout
-    - cron: '0 */8 * * *'
-  workflow_dispatch: # Allows you to run it manually to test
+    - cron: '0 */8 * * *' # Runs every 8 hours
+  workflow_dispatch:
 
 jobs:
   keep-alive:
     runs-on: ubuntu-latest
-    
-    # Permissions required to let the action push a commit back to your repo
-    permissions:
-      contents: write
-
     steps:
-    # 1. Check out your repository code
-    - name: Checkout Code
-      uses: actions/checkout@v4
-
-    # 2. Make an empty commit and push it
-    - name: Push Empty Commit
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        
-        # The '--allow-empty' flag tells Git to make a commit even if no files changed
-        git commit --allow-empty -m "Chore: Automated keep-alive ping for Streamlit"
-        
-        git push
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          pip install playwright
+          playwright install chromium
+          
+      - name: Run Wake-up Script
+        run: python wake_apps.py
