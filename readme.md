@@ -12,11 +12,14 @@ This project provides a complete pipeline from synthetic data generation to mach
 * **`dashboard.py`**: The main Streamlit application for the interactive user dashboard.
 * **`train_model.py`**: Script used to train the machine learning models.
 * **`generate_data.py`** / **`generate_good_data.py`**: Scripts for generating synthetic membrane and temperature-corrected data for training and testing.
+* **`generate_data_for_training.py`**: Preprocessing script to convert raw `sensors.csv` data into the standardized format required for training.
+* **`generate_sensors.py`**: Script to simulate raw sensor output data.
 * **`*.pkl` files**: Pre-trained machine learning models:
     * `recovery_model.pkl`: Predicts the acid recovery performance.
     * `fouling_model.pkl`: Assesses the current fouling state of the membrane.
     * `days_to_cleaning_model.pkl`: Predicts how many days are left before a cleaning cycle is necessary.
-* **`diffusion_dialysis_input_data.csv`**: The primary dataset used for model inputs.
+* **`sensors.csv`**: The raw sensor log file.
+* **`diffusion_dialysis_input_data.csv`** & **`diffusion_dialysis_input_data2.csv`**: Standardized datasets used as primary inputs for model training.
 * **`wake_apps.py`** & **`.github/workflows`**: Automation scripts and GitHub Actions to keep the Streamlit Cloud application awake and running.
 * **`.devcontainer/`**: Configuration for standardizing the development environment.
 * **`requirements.txt`**: Python dependencies required to run the project.
