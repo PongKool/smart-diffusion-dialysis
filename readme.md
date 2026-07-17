@@ -7,6 +7,11 @@ This diffusion dialysis system is designed to treat wastewater from the metal in
 
 This project provides a complete pipeline from synthetic data generation to machine learning model training and a fully interactive web dashboard. It utilizes various predictive models to monitor the efficiency and maintenance needs of diffusion dialysis membranes, such as predicting fouling, acid recovery rates, and estimating the remaining days until the membrane requires cleaning.
 
+## Steps to test
+1. Get sensors.csv, a log file of sensor data by collecting from DAQ board or generating it.
+2. Run python generate_data_for_training.py. This code will use sensors.csv as input to calculate other parameters, and generate diffusion_dialysis_input_data.csv, which can be used with train_model.py
+3. train_model.py generate machine learning model 3 models
+
 ## 📁 Repository Structure
 
 * **`dashboard.py`**: The main Streamlit application for the interactive user dashboard.
