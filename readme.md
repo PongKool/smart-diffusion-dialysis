@@ -10,7 +10,8 @@ This project provides a complete pipeline from synthetic data generation to mach
 ## Steps to test
 1. Get **sensors.csv**, a log file of sensor data by collecting from DAQ board or generating it.
 2. Run python **generate_data_for_training.py**. This code will use **sensors.csv** as input to calculate other parameters, and generate **diffusion_dialysis_input_data.csv**, which can be used with **train_model.py**
-3. Run **train_model.py** using **diffusion_dialysis_input_data.csv** as an input to generate machine learning model 3 models.
+3. Run **train_model.py** using **diffusion_dialysis_input_data.csv** as an input to generate machine learning model 3 models (**recovery_model.pkl, fouling_model.pkl and days_to_cleaning_model.pkl**).
+4. **dashboard.py** will use 3 models as input to show output in Streamlit cloud.
 
 ## 📁 Repository Structure
 
